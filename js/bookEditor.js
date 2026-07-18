@@ -81,17 +81,21 @@ export function openBookEditor(nav, { book, isNew, refresh, autoFetch }) {
       const data = await res.json();
       draft.url = url;
       if (data.title) draft.title = data.title;
+      if (data.author) draft.author = data.author;
       if (data.image) draft.coverImage = data.image;
       draft.siteName = data.siteName || hostnameFor(url);
       titleInput.value = draft.title || "";
+      authorInput.value = draft.author || "";
       renderImagePreview();
       if (data.error) {
         msgEl.textContent = `${data.error} You can still fill in the details yourself, or add your own cover photo below.`;
         msgEl.classList.add("error");
       } else if (data.notice) {
         msgEl.textContent = `${data.notice} You can add your own cover photo below instead.`;
+      } else if (!data.author) {
+        msgEl.textContent = "Got it — title and cover filled in below. Couldn't find an author, though — mind adding it?";
       } else {
-        msgEl.textContent = "Got it — title and cover filled in below.";
+        msgEl.textContent = "Got it — title, author and cover filled in below.";
       }
     } catch {
       msgEl.textContent = "Couldn't fetch that link. You can still fill in the details yourself.";

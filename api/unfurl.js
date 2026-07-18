@@ -51,6 +51,63 @@ function getItempropImage(html) {
   return match ? decodeEntities(match[1].trim()) : "";
 }
 
+// Author name isn't standardized the way title/image are — different sites
+// expose it through <meta name="author">, the Open Graph "book:author"
+// property, schema.org itemprop="author" microdata, or a JSON-LD "author"
+// field. Tried roughly in order of how reliable/common each is.
+function getMetaAuthor(html) {
+  return getMeta(html, "author") || getMeta(html, "book:author") || getMeta(html, "books:author");
+}
+
+function getItempropAuthorText(html) {
+  // <span itemprop="author">Name</span> or a <meta itemprop="author" content="Name">.
+  const metaMatch = html.match(/<meta[^>]+itemprop=["']author["'][^>]*content=["']([^"']*)["']/i);
+  if (metaMatch) return decodeEntities(metaMatch[1].trim());
+  const tagMatch = html.match(/itemprop=["']author["'][^>]*>([^<]{1,120})</i);
+  return tagMatch ? decodeEntities(tagMatch[1].trim()) : "";
+}
+
+function findAuthorInJsonLd(html) {
+  const scripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const [, raw] of scripts) {
+    try {
+      const data = JSON.parse(raw.trim());
+      const nodes = Array.isArray(data) ? data : [data];
+      for (const node of nodes) {
+        const found = searchForAuthor(node);
+        if (found) return found;
+      }
+    } catch {
+      // Not valid JSON, or not the shape we expect — skip it.
+    }
+  }
+  return "";
+}
+
+function authorNameFrom(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(authorNameFrom).filter(Boolean).join(", ");
+  if (typeof value === "object") return value.name || "";
+  return "";
+}
+
+function searchForAuthor(node, depth = 0) {
+  if (!node || typeof node !== "object" || depth > 4) return "";
+  if (node.author) {
+    const name = authorNameFrom(node.author);
+    if (name) return name;
+  }
+  const graph = node["@graph"];
+  if (Array.isArray(graph)) {
+    for (const entry of graph) {
+      const found = searchForAuthor(entry, depth + 1);
+      if (found) return found;
+    }
+  }
+  return "";
+}
+
 function resolveUrl(maybeRelative, base) {
   if (!maybeRelative) return "";
   try {
@@ -123,6 +180,7 @@ module.exports = async (req, res) => {
         error: messageForStatus(response.status),
         title: "",
         image: "",
+        author: "",
         description: "",
         siteName: parsed.hostname,
         sourceUrl: parsed.toString(),
@@ -141,13 +199,14 @@ module.exports = async (req, res) => {
       finalUrl
     );
     const siteName = getMeta(html, "og:site_name") || parsed.hostname.replace(/^www\./, "");
+    const author = getMetaAuthor(html) || getItempropAuthorText(html) || findAuthorInJsonLd(html);
 
     // The page loaded (HTTP 200) but nothing at all could be extracted —
     // usually means the real content only appears after JavaScript runs
     // (this fetch never executes scripts), or the response was actually a
     // bot-check/consent page disguised as a normal 200.
     const foundNothing = !title && !image && !description;
-    const result = { title, image, description, siteName, sourceUrl: finalUrl };
+    const result = { title, image, author, description, siteName, sourceUrl: finalUrl };
     if (foundNothing) {
       result.error = "Couldn't find any details on this page — it may block scraping or need JavaScript to load its content.";
     } else if (!image) {
@@ -156,7 +215,7 @@ module.exports = async (req, res) => {
     res.status(200).json(result);
   } catch (err) {
     const message = err && err.name === "AbortError" ? "Timed out fetching that page." : "Couldn't fetch that link.";
-    res.status(200).json({ error: message, title: "", image: "", description: "", siteName: parsed.hostname, sourceUrl: parsed.toString() });
+    res.status(200).json({ error: message, title: "", image: "", author: "", description: "", siteName: parsed.hostname, sourceUrl: parsed.toString() });
   } finally {
     clearTimeout(timeout);
   }

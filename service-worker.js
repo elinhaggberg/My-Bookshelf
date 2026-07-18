@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-bookshelf-v1";
+const CACHE_NAME = "my-bookshelf-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
