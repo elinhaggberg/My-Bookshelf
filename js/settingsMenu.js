@@ -1,0 +1,109 @@
+import { openSheet } from "./sheet.js";
+import { exportBackupData, importData, getHomeTitle, setHomeTitle } from "./storage.js";
+import { shareOrDownload } from "./share.js";
+import { getTheme, setTheme } from "./theme.js";
+
+export function openSettingsMenu(refresh) {
+  const sheet = openSheet("tpl-settings-menu");
+  const el = sheet.el;
+  el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
+
+  el.querySelector("#instructions-btn").addEventListener("click", () => {
+    sheet.close();
+    openInstructions();
+  });
+  el.querySelector("#customize-btn").addEventListener("click", () => {
+    sheet.close();
+    openCustomize();
+  });
+  el.querySelector("#export-all-btn").addEventListener("click", async () => {
+    const data = exportBackupData();
+    const stamp = new Date().toISOString().slice(0, 10);
+    await shareOrDownload(`my-bookshelf-backup-${stamp}.json`, JSON.stringify(data, null, 2));
+    sheet.close();
+  });
+  el.querySelector("#import-btn").addEventListener("click", () => {
+    sheet.close();
+    openImport(refresh);
+  });
+}
+
+function openInstructions() {
+  const sheet = openSheet("tpl-instructions");
+  sheet.el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
+}
+
+function openCustomize() {
+  const sheet = openSheet("tpl-customize");
+  const el = sheet.el;
+  el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
+
+  const titleInput = el.querySelector("#home-title-input");
+  titleInput.value = getHomeTitle();
+  titleInput.addEventListener("input", () => {
+    setHomeTitle(titleInput.value);
+    const homeTitleEl = document.getElementById("home-title");
+    if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
+  });
+
+  const accentPicker = el.querySelector("#playful-accent-picker");
+  const themeButtons = el.querySelectorAll(".theme-option");
+  const swatchButtons = el.querySelectorAll(".swatch-btn");
+
+  function renderActive() {
+    const pref = getTheme();
+    themeButtons.forEach((b) => b.classList.toggle("active", b.dataset.themeMode === pref.mode));
+    swatchButtons.forEach((b) => b.classList.toggle("active", b.dataset.accent === pref.playfulAccent));
+    accentPicker.classList.toggle("hidden", pref.mode !== "playful");
+  }
+
+  themeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setTheme({ ...getTheme(), mode: btn.dataset.themeMode });
+      renderActive();
+    });
+  });
+  swatchButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setTheme({ ...getTheme(), playfulAccent: btn.dataset.accent });
+      renderActive();
+    });
+  });
+
+  renderActive();
+}
+
+function openImport(refresh) {
+  const sheet = openSheet("tpl-import");
+  const fileInput = sheet.el.querySelector(".import-file-input");
+  const messageEl = sheet.el.querySelector(".import-message");
+
+  sheet.el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
+  sheet.el.querySelector(".import-file-btn").addEventListener("click", () => fileInput.click());
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    messageEl.classList.remove("error");
+
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      messageEl.textContent = "That doesn't look like valid JSON.";
+      messageEl.classList.add("error");
+      return;
+    }
+    try {
+      const result = importData(parsed);
+      messageEl.textContent = result.bookCount
+        ? `Imported ${result.bookCount} book${result.bookCount !== 1 ? "s" : ""}.`
+        : "Import complete.";
+      if (refresh) refresh();
+      setTimeout(() => sheet.close(), 900);
+    } catch (err) {
+      messageEl.textContent = err.message || "That doesn't look like a valid export file.";
+      messageEl.classList.add("error");
+    }
+  });
+}
