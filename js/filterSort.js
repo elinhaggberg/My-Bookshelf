@@ -19,7 +19,7 @@ export function applyFilterSort(books, pref, status) {
     list = list.filter((b) => (b.rating || 0) === target);
   }
   if (pref.genre !== "any") {
-    list = list.filter((b) => (b.genre || "").trim() === pref.genre);
+    list = list.filter((b) => (b.genres || []).includes(pref.genre));
   }
   if (pref.format !== "any") {
     list = list.filter((b) => b.format === pref.format);

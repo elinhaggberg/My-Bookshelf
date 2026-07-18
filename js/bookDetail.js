@@ -1,7 +1,7 @@
 import { getBook, saveBook, deleteBook, exportBookData, statusFor } from "./storage.js";
 import { openSheet } from "./sheet.js";
 import { shareOrDownload, filenameFor } from "./share.js";
-import { hostnameFor, formatDate, todayISO } from "./util.js";
+import { hostnameFor, formatDate, todayISO, escapeHtml } from "./util.js";
 import { renderStarPicker } from "./starRating.js";
 import { openBookEditor } from "./bookEditor.js";
 import { ICON_HEADPHONES, ICON_BOOK } from "./icons.js";
@@ -28,8 +28,7 @@ export function openBookDetail(nav, bookRef, refresh) {
   }
 
   const tagsEl = el.querySelector("#detail-tags");
-  const tags = [];
-  if (book.genre) tags.push(`<span class="detail-tag">${book.genre}</span>`);
+  const tags = (book.genres || []).map((g) => `<span class="detail-tag">${escapeHtml(g)}</span>`);
   tags.push(
     `<span class="detail-tag">${book.format === "audiobook" ? ICON_HEADPHONES : ICON_BOOK}<span>${
       book.format === "audiobook" ? "Audiobook" : "Physical"

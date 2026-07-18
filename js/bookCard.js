@@ -1,10 +1,11 @@
 import { formatDate } from "./util.js";
 import { statusFor } from "./storage.js";
-import { ICON_IMAGE, ICON_STAR, ICON_HEADPHONES, ICON_BOOK } from "./icons.js";
+import { ICON_IMAGE, ICON_STAR, ICON_STAR_OUTLINE, ICON_HEADPHONES, ICON_BOOK } from "./icons.js";
 
 function starsMarkup(rating) {
   if (!rating) return "";
-  return `<span class="pin-stars">${ICON_STAR}<span>${rating}</span></span>`;
+  const stars = [1, 2, 3, 4, 5].map((n) => (n <= rating ? ICON_STAR : ICON_STAR_OUTLINE)).join("");
+  return `<span class="pin-stars">${stars}</span>`;
 }
 
 // Builds one Pinterest-style grid tile from the shared <template id="tpl-pin-card">.

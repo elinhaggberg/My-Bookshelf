@@ -97,11 +97,11 @@
         <span>Author</span>
         <input type="text" id="editor-author" maxlength="120" placeholder="Author name" />
       </label>
-      <label class="field">
-        <span>Genre</span>
-        <input type="text" id="editor-genre" maxlength="60" placeholder="e.g. Fantasy" list="genre-suggestions" autocomplete="off" />
+      <div class="field">
+        <span>Genres</span>
+        <div id="editor-genre" class="tag-input-container"></div>
         <datalist id="genre-suggestions"></datalist>
-      </label>
+      </div>
 
       <p class="card-detail-section-label">Format</p>
       <div class="segmented" id="editor-format-segmented" style="margin-bottom:16px;">
@@ -278,6 +278,20 @@
           <h3>Themes</h3>
           <p>Pick Playful, Light, or Dark from Settings → Customize. Playful lets you choose your own accent color too.</p>
         </section>
+      </div>
+    </div>
+  </template>
+
+  <!-- ===== What's new ===== -->
+  <template id="tpl-whats-new">
+    <div class="sheet">
+      <header class="sheet-header">
+        <h2>What's new</h2>
+        <button class="icon-btn close-btn" aria-label="Close"><svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg></button>
+      </header>
+      <div class="whats-new-body" id="whats-new-body"></div>
+      <div class="form-actions">
+        <button type="button" class="text-btn primary" id="whats-new-got-it-btn">Got it</button>
       </div>
     </div>
   </template>

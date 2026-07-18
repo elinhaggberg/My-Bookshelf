@@ -4,6 +4,7 @@ import { renderReading } from "./views/reading.js";
 import { applyTheme } from "./theme.js";
 import { createEmptyBook } from "./storage.js";
 import { openBookEditor } from "./bookEditor.js";
+import { checkWhatsNew } from "./whatsNew.js";
 
 applyTheme();
 
@@ -48,18 +49,21 @@ function handleIncomingShare() {
   const params = new URLSearchParams(location.search);
   const raw = params.get("url") || params.get("text") || "";
   const match = raw.match(/https?:\/\/\S+/);
-  if (!match) return;
+  if (!match) return false;
 
   history.replaceState(null, "", location.pathname + location.hash);
 
   const book = createEmptyBook();
   book.url = match[0];
   openBookEditor(nav, { book, isNew: true, refresh: route, autoFetch: true });
+  return true;
 }
 
 window.addEventListener("hashchange", route);
 route();
-handleIncomingShare();
+// Skip the "what's new" sheet when a share-target flow is about to pop its
+// own sheet open — stacking them on first paint reads as broken, not busy.
+if (!handleIncomingShare()) checkWhatsNew();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

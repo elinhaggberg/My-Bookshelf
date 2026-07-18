@@ -2,6 +2,7 @@ const BOOKS_KEY = "mb_books_v1";
 const THEME_KEY = "mb_theme_v1";
 const HOME_TITLE_KEY = "mb_home_title_v1";
 const FILTER_SORT_KEY = "mb_filter_sort_v1";
+const LAST_SEEN_VERSION_KEY = "mb_last_seen_version_v1";
 
 function uid() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -23,8 +24,17 @@ function writeJSON(key, value) {
 
 // ---- Books ----
 
+// Genre used to be a single free-text string; it's now a list of tags.
+// Normalizing on every read lets older saved/imported books (with a plain
+// `genre` string, or nothing at all) keep working without a one-time
+// migration step.
+function normalizeBook(book) {
+  const { genre, genres, ...rest } = book;
+  return { ...rest, genres: genres || (genre ? [genre] : []) };
+}
+
 export function getBooks() {
-  return readJSON(BOOKS_KEY, []);
+  return readJSON(BOOKS_KEY, []).map(normalizeBook);
 }
 
 export function getBook(id) {
@@ -54,7 +64,7 @@ export function createEmptyBook() {
     coverImage: "",
     url: "",
     siteName: "",
-    genre: "",
+    genres: [],
     format: "physical",
     rating: 0,
     note: "",
@@ -75,13 +85,15 @@ export function getBooksByStatus(status) {
   return getBooks().filter((b) => statusFor(b) === status);
 }
 
-// Genre suggestions are whatever the user has already typed elsewhere,
-// rather than a fixed taxonomy — keeps the field free-text but still
+// Genre tag suggestions are whatever the user has already typed elsewhere,
+// rather than a fixed taxonomy — keeps tags free-text but still
 // filterable/consistent once a few books share a spelling.
 export function getGenres() {
   const set = new Set();
   for (const book of getBooks()) {
-    if (book.genre && book.genre.trim()) set.add(book.genre.trim());
+    for (const g of book.genres || []) {
+      if (g && g.trim()) set.add(g.trim());
+    }
   }
   return [...set].sort((a, b) => a.localeCompare(b));
 }
@@ -133,6 +145,14 @@ export function getThemePref() {
 
 export function setThemePref(pref) {
   writeJSON(THEME_KEY, pref);
+}
+
+export function getLastSeenVersion() {
+  return localStorage.getItem(LAST_SEEN_VERSION_KEY) || "";
+}
+
+export function setLastSeenVersion(version) {
+  localStorage.setItem(LAST_SEEN_VERSION_KEY, version);
 }
 
 export function getHomeTitle() {

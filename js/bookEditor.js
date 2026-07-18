@@ -2,6 +2,7 @@ import { createEmptyBook, saveBook, getGenres } from "./storage.js";
 import { openSheet } from "./sheet.js";
 import { readAndResizeImage } from "./photo.js";
 import { renderStarPicker } from "./starRating.js";
+import { renderTagInput } from "./tagInput.js";
 import { hostnameFor, todayISO } from "./util.js";
 
 export function openAddBook(nav, refresh, presetStatus) {
@@ -116,19 +117,11 @@ export function openBookEditor(nav, { book, isNew, refresh, autoFetch }) {
     draft.author = authorInput.value;
   });
 
-  // ---- Genre ----
-  const genreInput = el.querySelector("#editor-genre");
-  const genreList = el.querySelector("#genre-suggestions");
-  genreList.replaceChildren(
-    ...getGenres().map((g) => {
-      const opt = document.createElement("option");
-      opt.value = g;
-      return opt;
-    })
-  );
-  genreInput.value = draft.genre || "";
-  genreInput.addEventListener("input", () => {
-    draft.genre = genreInput.value;
+  // ---- Genre tags ----
+  const genreTags = renderTagInput(el.querySelector("#editor-genre"), {
+    tags: draft.genres || [],
+    suggestions: getGenres(),
+    datalistId: "genre-suggestions",
   });
 
   // ---- Format ----
@@ -186,7 +179,7 @@ export function openBookEditor(nav, { book, isNew, refresh, autoFetch }) {
       ...draft,
       title: draft.title?.trim() || "Untitled",
       author: draft.author?.trim() || "",
-      genre: draft.genre?.trim() || "",
+      genres: genreTags.getTags(),
     };
     saveBook(finalBook);
     sheet.close();

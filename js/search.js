@@ -27,7 +27,7 @@ export function openSearch(nav, refresh) {
       return (
         (b.title || "").toLowerCase().includes(q) ||
         (b.author || "").toLowerCase().includes(q) ||
-        (b.genre || "").toLowerCase().includes(q) ||
+        (b.genres || []).some((g) => g.toLowerCase().includes(q)) ||
         (b.note || "").toLowerCase().includes(q)
       );
     });
