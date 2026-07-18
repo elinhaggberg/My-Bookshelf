@@ -8,8 +8,8 @@ export function renderTabbar(root, nav, active) {
   bar.className = "tabbar";
   bar.innerHTML = `<div class="tabbar-inner">
     <button type="button" class="tab-btn" data-tab="home">${ICON_HOME}<span>Home</span></button>
-    <button type="button" class="tab-btn" data-tab="toread">${ICON_TOREAD}<span>To Read</span></button>
     <button type="button" class="tab-btn" data-tab="reading">${ICON_READING}<span>Reading</span></button>
+    <button type="button" class="tab-btn" data-tab="toread">${ICON_TOREAD}<span>To Read</span></button>
   </div>`;
   bar.querySelectorAll(".tab-btn").forEach((btn) => {
     if (btn.dataset.tab === active) btn.classList.add("active");
