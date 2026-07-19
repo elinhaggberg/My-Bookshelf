@@ -5,6 +5,7 @@ import { applyTheme } from "./theme.js";
 import { createEmptyBook } from "./storage.js";
 import { openBookEditor } from "./bookEditor.js";
 import { checkWhatsNew } from "./whatsNew.js";
+import { checkOnboarding } from "./onboarding.js";
 
 applyTheme();
 
@@ -61,9 +62,13 @@ function handleIncomingShare() {
 
 window.addEventListener("hashchange", route);
 route();
-// Skip the "what's new" sheet when a share-target flow is about to pop its
-// own sheet open — stacking them on first paint reads as broken, not busy.
-if (!handleIncomingShare()) checkWhatsNew();
+// Skip the onboarding/"what's new" sheets when a share-target flow is about
+// to pop its own sheet open — stacking them on first paint reads as broken,
+// not busy.
+if (!handleIncomingShare()) {
+  checkOnboarding();
+  checkWhatsNew();
+}
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
