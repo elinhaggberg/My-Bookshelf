@@ -14,6 +14,17 @@ function relevantDate(book, status) {
 export function applyFilterSort(books, pref, status) {
   let list = books;
 
+  const query = (pref.query || "").trim().toLowerCase();
+  if (query) {
+    list = list.filter((b) => {
+      return (
+        (b.title || "").toLowerCase().includes(query) ||
+        (b.author || "").toLowerCase().includes(query) ||
+        (b.genres || []).some((g) => g.toLowerCase().includes(query)) ||
+        (b.note || "").toLowerCase().includes(query)
+      );
+    });
+  }
   if (pref.rating !== "any") {
     const target = Number(pref.rating);
     list = list.filter((b) => (b.rating || 0) === target);
@@ -43,7 +54,7 @@ export function applyFilterSort(books, pref, status) {
 }
 
 export function isFilterActive(pref) {
-  return pref.rating !== "any" || pref.genre !== "any" || pref.format !== "any";
+  return pref.rating !== "any" || pref.genre !== "any" || pref.format !== "any" || (pref.query || "").trim() !== "";
 }
 
 const SORT_OPTIONS = [
@@ -59,6 +70,14 @@ export function openFilterSort(onChange) {
   el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
 
   const pref = getFilterSortPref();
+
+  const queryInput = el.querySelector("#filter-query-input");
+  queryInput.value = pref.query || "";
+  queryInput.addEventListener("input", () => {
+    pref.query = queryInput.value;
+    setFilterSortPref(pref);
+    onChange();
+  });
 
   const sortList = el.querySelector("#filter-sort-list");
   sortList.replaceChildren(
@@ -149,7 +168,7 @@ export function openFilterSort(onChange) {
   );
 
   el.querySelector("#filter-reset-btn").addEventListener("click", () => {
-    setFilterSortPref({ sort: "date-desc", rating: "any", genre: "any", format: "any" });
+    setFilterSortPref({ sort: "date-desc", rating: "any", genre: "any", format: "any", query: "" });
     sheet.close();
     onChange();
   });

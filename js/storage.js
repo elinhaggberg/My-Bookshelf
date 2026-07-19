@@ -181,7 +181,7 @@ export function setHomeTitle(value) {
   else localStorage.removeItem(HOME_TITLE_KEY);
 }
 
-const DEFAULT_FILTER_SORT = { sort: "date-desc", rating: "any", genre: "any", format: "any" };
+const DEFAULT_FILTER_SORT = { sort: "date-desc", rating: "any", genre: "any", format: "any", query: "" };
 
 export function getFilterSortPref() {
   return { ...DEFAULT_FILTER_SORT, ...readJSON(FILTER_SORT_KEY, {}) };
