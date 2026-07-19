@@ -1,5 +1,5 @@
 import { openSheet } from "./sheet.js";
-import { exportBackupData, importData, getHomeTitle, setHomeTitle } from "./storage.js";
+import { exportBackupData, importData, getHomeTitle, setHomeTitle, markBackedUp } from "./storage.js";
 import { shareOrDownload } from "./share.js";
 import { getTheme, setTheme } from "./theme.js";
 
@@ -20,6 +20,7 @@ export function openSettingsMenu(refresh) {
     const data = exportBackupData();
     const stamp = new Date().toISOString().slice(0, 10);
     await shareOrDownload(`my-bookshelf-backup-${stamp}.json`, JSON.stringify(data, null, 2));
+    markBackedUp();
     sheet.close();
   });
   el.querySelector("#import-btn").addEventListener("click", () => {

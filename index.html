@@ -33,6 +33,13 @@
       <button class="icon-btn" id="filter-btn" aria-label="Filter and sort"><svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"/><path d="M7 12h10"/><path d="M10.5 19h3"/></svg></button>
       <button class="icon-btn settings-btn" id="settings-btn" aria-label="Menu"><svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.2" stroke-linecap="round"><path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17"/></svg></button>
     </header>
+    <div id="backup-banner" class="banner hidden">
+      <p>You haven't backed up in a while — export takes a second.</p>
+      <div class="banner-actions">
+        <button type="button" class="text-btn primary" id="backup-now-btn">Back up now</button>
+        <button type="button" class="text-btn" id="backup-dismiss-btn">Later</button>
+      </div>
+    </div>
     <div class="page-body">
       <div class="card-grid" id="shelf-grid"></div>
     </div>

@@ -3,6 +3,9 @@ const THEME_KEY = "mb_theme_v1";
 const HOME_TITLE_KEY = "mb_home_title_v1";
 const FILTER_SORT_KEY = "mb_filter_sort_v1";
 const LAST_SEEN_VERSION_KEY = "mb_last_seen_version_v1";
+const LAST_BACKUP_KEY = "mb_last_backup_at_v1";
+const BACKUP_BANNER_DISMISSED_KEY = "mb_backup_banner_dismissed_at_v1";
+const FIRST_OPEN_KEY = "mb_first_open_at_v1";
 
 function uid() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -185,6 +188,44 @@ export function getFilterSortPref() {
 
 export function setFilterSortPref(pref) {
   writeJSON(FILTER_SORT_KEY, pref);
+}
+
+const BACKUP_REMIND_AFTER_MS = 14 * 24 * 60 * 60 * 1000; // 2 weeks
+const BACKUP_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000; // re-ask 3 days after "Later"
+
+function getFirstOpenAt() {
+  let v = Number(localStorage.getItem(FIRST_OPEN_KEY));
+  if (!v) {
+    v = Date.now();
+    localStorage.setItem(FIRST_OPEN_KEY, String(v));
+  }
+  return v;
+}
+
+export function markBackedUp() {
+  localStorage.setItem(LAST_BACKUP_KEY, String(Date.now()));
+  localStorage.removeItem(BACKUP_BANNER_DISMISSED_KEY);
+}
+
+export function dismissBackupBanner() {
+  localStorage.setItem(BACKUP_BANNER_DISMISSED_KEY, String(Date.now()));
+}
+
+// Nudges toward exporting a backup every ~2 weeks, since all data lives only
+// on this device. Tied to the last time a real export happened (or, if
+// never, since first open) -- not to when the banner was last shown -- so
+// dismissing with "Later" doesn't quietly reset the clock without an actual
+// backup having happened.
+export function shouldShowBackupBanner() {
+  if (getBooks().length === 0) return false;
+
+  const lastBackupAt = Number(localStorage.getItem(LAST_BACKUP_KEY)) || getFirstOpenAt();
+  if (Date.now() - lastBackupAt < BACKUP_REMIND_AFTER_MS) return false;
+
+  const dismissedAt = Number(localStorage.getItem(BACKUP_BANNER_DISMISSED_KEY));
+  if (dismissedAt && Date.now() - dismissedAt < BACKUP_SNOOZE_MS) return false;
+
+  return true;
 }
 
 export { uid };

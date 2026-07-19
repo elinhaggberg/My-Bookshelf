@@ -172,6 +172,18 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
+/* Backup reminder banner */
+.banner {
+  margin: 0 16px 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.banner p { margin: 0 0 10px; font-size: 0.9rem; }
+.banner-actions { display: flex; gap: 8px; }
+.banner-actions .text-btn { padding: 6px 12px; font-size: 0.85rem; }
+
 /* Bottom tab bar */
 .tabbar {
   position: fixed;

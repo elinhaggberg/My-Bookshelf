@@ -1,4 +1,13 @@
-import { getBooksByStatus, getHomeTitle, getFilterSortPref } from "../storage.js";
+import {
+  getBooksByStatus,
+  getHomeTitle,
+  getFilterSortPref,
+  exportBackupData,
+  markBackedUp,
+  dismissBackupBanner,
+  shouldShowBackupBanner,
+} from "../storage.js";
+import { shareOrDownload } from "../share.js";
 import { createBookNode } from "../bookCard.js";
 import { renderTabbar } from "../tabbar.js";
 import { renderMasonry } from "../masonry.js";
@@ -34,6 +43,26 @@ export function renderShelf(root, nav, { status, tab, title, emptyText }) {
   document.getElementById("settings-btn").addEventListener("click", () => openSettingsMenu(renderList));
 
   renderList();
+
+  // Only Home (not To Read / Reading, which reuse this same shelf) shows the
+  // backup reminder, so it's not repeated three times across tabs.
+  if (tab === "home") {
+    const banner = document.getElementById("backup-banner");
+    if (shouldShowBackupBanner()) {
+      banner.classList.remove("hidden");
+      banner.querySelector("#backup-now-btn").addEventListener("click", async () => {
+        const data = exportBackupData();
+        const stamp = new Date().toISOString().slice(0, 10);
+        await shareOrDownload(`my-bookshelf-backup-${stamp}.json`, JSON.stringify(data, null, 2));
+        markBackedUp();
+        banner.classList.add("hidden");
+      });
+      banner.querySelector("#backup-dismiss-btn").addEventListener("click", () => {
+        dismissBackupBanner();
+        banner.classList.add("hidden");
+      });
+    }
+  }
 
   function renderList() {
     filterBtn.classList.toggle("active", isFilterActive(getFilterSortPref()));
