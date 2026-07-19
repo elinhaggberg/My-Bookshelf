@@ -13,6 +13,7 @@ export const CHANGELOG = [
       "Genres now work like tags — add as many as you like per book, and your existing ones are suggested as you type to keep filtering consistent.",
       "Star ratings on book cards now show as a row of stars instead of a star icon plus a number.",
       "You'll see a note like this one whenever the app updates, so you always know what's changed.",
+      "Full backups now also include your theme and home screen title, not just your books — if you've exported one before, it's worth making a fresh one.",
     ],
   },
 ];
