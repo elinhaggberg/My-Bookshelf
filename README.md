@@ -29,3 +29,7 @@ The only server-side piece is `api/unfurl.js`, a stateless Vercel serverless fun
 ## Deploying
 
 Deploy straight from this repo on [Vercel](https://vercel.com) — no configuration needed. It auto-detects the static site plus the `api/` serverless function.
+
+## License
+
+[GNU AGPL-3.0](LICENSE). Free to use, copy, and modify — but any version you distribute or run as a hosted service has to stay open source too.
