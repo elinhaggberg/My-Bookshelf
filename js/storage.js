@@ -106,6 +106,8 @@ export function exportBackupData() {
     version: 1,
     exportedAt: new Date().toISOString(),
     books: getBooks(),
+    theme: getThemePref(),
+    homeTitle: getHomeTitle(),
   };
 }
 
@@ -134,7 +136,17 @@ export function importData(data) {
   }));
   writeJSON(BOOKS_KEY, [...getBooks(), ...newBooks]);
 
-  return { bookCount: newBooks.length };
+  // Theme and home title are single current-state settings, not a list, so
+  // a full backup restore applies them directly rather than merging --
+  // that's what "restore my backup" means for a device's preferences.
+  let preferencesApplied = false;
+  if (data.type === "backup") {
+    if (data.theme) setThemePref(data.theme);
+    if (data.homeTitle) setHomeTitle(data.homeTitle);
+    preferencesApplied = Boolean(data.theme || data.homeTitle);
+  }
+
+  return { bookCount: newBooks.length, preferencesApplied };
 }
 
 // ---- Preferences ----

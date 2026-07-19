@@ -96,9 +96,11 @@ function openImport(refresh) {
     }
     try {
       const result = importData(parsed);
-      messageEl.textContent = result.bookCount
+      let text = result.bookCount
         ? `Imported ${result.bookCount} book${result.bookCount !== 1 ? "s" : ""}.`
         : "Import complete.";
+      if (result.preferencesApplied) text += " Restored your theme/settings too.";
+      messageEl.textContent = text;
       if (refresh) refresh();
       setTimeout(() => sheet.close(), 900);
     } catch (err) {
