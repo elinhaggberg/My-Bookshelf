@@ -2,10 +2,11 @@ import { renderHome } from "./views/home.js";
 import { renderToRead } from "./views/toread.js";
 import { renderReading } from "./views/reading.js";
 import { applyTheme } from "./theme.js";
-import { createEmptyBook } from "./storage.js";
+import { createEmptyBook, migrateImagesToIndexedDB } from "./storage.js";
 import { openBookEditor } from "./bookEditor.js";
 import { checkWhatsNew } from "./whatsNew.js";
 import { checkOnboarding } from "./onboarding.js";
+import { checkMigrationNotice } from "./migrationNotice.js";
 
 applyTheme();
 
@@ -61,14 +62,31 @@ function handleIncomingShare() {
 }
 
 window.addEventListener("hashchange", route);
-route();
-// Skip the onboarding/"what's new" sheets when a share-target flow is about
-// to pop its own sheet open — stacking them on first paint reads as broken,
-// not busy.
-if (!handleIncomingShare()) {
-  checkOnboarding();
-  checkWhatsNew();
-}
+
+// Anyone who saved cover photos before IndexedDB storage existed has them
+// sitting in localStorage as huge inline images — move those out before
+// the first render so the app isn't showing (and re-writing) oversized
+// data any longer than it has to. checkMigrationNotice reads the current
+// (pre-migration) data to decide whether to say anything, so it must run
+// first; the migration itself is a no-op after the first run either way,
+// and doesn't wait on the notice being read — it's just explaining what's
+// already happening in the background.
+const migrationNotice = checkMigrationNotice();
+const migrationDone = migrateImagesToIndexedDB().finally(() => {
+  route();
+});
+
+// Held until the migration notice (if any) has actually been dismissed and
+// the migration itself has finished, so a second one-time sheet can't stack
+// on top of it before it's been read. Also skips the onboarding/"what's
+// new" sheets when a share-target flow is about to pop its own sheet open
+// — stacking them on first paint reads as broken, not busy.
+Promise.all([migrationNotice, migrationDone]).then(() => {
+  if (!handleIncomingShare()) {
+    checkOnboarding();
+    checkWhatsNew();
+  }
+});
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

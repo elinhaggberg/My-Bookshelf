@@ -3,6 +3,7 @@ import { openSheet } from "./sheet.js";
 import { readAndResizeImage } from "./photo.js";
 import { renderStarPicker } from "./starRating.js";
 import { renderTagInput } from "./tagInput.js";
+import { resolveImageSrc } from "./imageStore.js";
 import { hostnameFor, todayISO } from "./util.js";
 
 export function openAddBook(nav, refresh, presetStatus) {
@@ -19,6 +20,35 @@ export function openBookEditor(nav, { book, isNew, refresh, autoFetch }) {
   el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
   el.querySelector("#editor-heading").textContent = isNew ? "Add a book" : "Edit book";
 
+  // Wired up front, before any of the widget setup below, so Save always
+  // works even if one of those unrelated blocks throws — a single bad
+  // element lookup shouldn't be able to silently disable the Save button.
+  const saveErrorEl = el.querySelector("#editor-save-error");
+  el.querySelector("#editor-save-btn").addEventListener("click", async () => {
+    const finalBook = {
+      ...draft,
+      title: draft.title?.trim() || "Untitled",
+      author: draft.author?.trim() || "",
+      genres: genreTags.getTags(),
+    };
+    try {
+      await saveBook(finalBook);
+    } catch (err) {
+      // Most likely a full localStorage (a device-imposed quota, hit
+      // sooner by cover photo uploads than a link's small image URL) —
+      // surface it instead of leaving the sheet sitting there looking
+      // unresponsive.
+      saveErrorEl.textContent =
+        err?.name === "QuotaExceededError"
+          ? "Your bookshelf is full on this device. Delete a few books with cover photos, or export a backup and remove some, then try again."
+          : "Couldn't save. Please try again.";
+      saveErrorEl.classList.remove("hidden");
+      return;
+    }
+    sheet.close();
+    refresh();
+  });
+
   // ---- Cover image ----
   const dropEl = el.querySelector("#photo-drop");
   const previewWrap = el.querySelector("#photo-preview-wrap");
@@ -28,9 +58,15 @@ export function openBookEditor(nav, { book, isNew, refresh, autoFetch }) {
 
   function renderImagePreview() {
     if (draft.coverImage) {
-      previewImg.src = draft.coverImage;
       dropEl.classList.add("hidden");
       previewWrap.classList.remove("hidden");
+      // draft.coverImage can be a remote URL, an "idb:" reference (editing
+      // an existing photo book), or a freshly-picked Blob (see handleFile)
+      // — resolveImageSrc handles all three, async since IndexedDB reads
+      // are.
+      resolveImageSrc(draft.coverImage).then((src) => {
+        if (src) previewImg.src = src;
+      });
     } else {
       previewWrap.classList.add("hidden");
       dropEl.classList.remove("hidden");
@@ -174,15 +210,4 @@ export function openBookEditor(nav, { book, isNew, refresh, autoFetch }) {
     draft.note = noteInput.value;
   });
 
-  el.querySelector("#editor-save-btn").addEventListener("click", () => {
-    const finalBook = {
-      ...draft,
-      title: draft.title?.trim() || "Untitled",
-      author: draft.author?.trim() || "",
-      genres: genreTags.getTags(),
-    };
-    saveBook(finalBook);
-    sheet.close();
-    refresh();
-  });
 }

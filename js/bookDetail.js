@@ -4,6 +4,7 @@ import { shareOrDownload, filenameFor } from "./share.js";
 import { hostnameFor, formatDate, todayISO, escapeHtml } from "./util.js";
 import { renderStarPicker } from "./starRating.js";
 import { openBookEditor } from "./bookEditor.js";
+import { resolveImageSrc } from "./imageStore.js";
 import { ICON_HEADPHONES, ICON_BOOK } from "./icons.js";
 
 export function openBookDetail(nav, bookRef, refresh) {
@@ -14,9 +15,13 @@ export function openBookDetail(nav, bookRef, refresh) {
 
   const img = el.querySelector("#detail-image");
   if (book.coverImage) {
-    img.src = book.coverImage;
     img.alt = book.title || "";
-    img.classList.remove("hidden");
+    resolveImageSrc(book.coverImage).then((src) => {
+      if (src) {
+        img.src = src;
+        img.classList.remove("hidden");
+      }
+    });
   }
 
   el.querySelector("#detail-title").textContent = book.title || "Untitled";
@@ -38,9 +43,9 @@ export function openBookDetail(nav, bookRef, refresh) {
 
   renderStarPicker(el.querySelector("#detail-star-picker"), {
     value: book.rating,
-    onChange: (rating) => {
+    onChange: async (rating) => {
       book.rating = rating;
-      saveBook(book);
+      await saveBook(book);
       refresh();
     },
   });
@@ -74,16 +79,16 @@ export function openBookDetail(nav, bookRef, refresh) {
   }
   renderLog();
 
-  el.querySelector("#detail-start-btn").addEventListener("click", () => {
+  el.querySelector("#detail-start-btn").addEventListener("click", async () => {
     book.startedAt = todayISO();
-    saveBook(book);
+    await saveBook(book);
     refresh();
     renderLog();
   });
-  el.querySelector("#detail-finish-btn").addEventListener("click", () => {
+  el.querySelector("#detail-finish-btn").addEventListener("click", async () => {
     book.finishedAt = todayISO();
     if (!book.startedAt) book.startedAt = book.finishedAt;
-    saveBook(book);
+    await saveBook(book);
     refresh();
     renderLog();
   });
@@ -94,7 +99,7 @@ export function openBookDetail(nav, bookRef, refresh) {
   });
 
   el.querySelector("#detail-share-btn").addEventListener("click", async () => {
-    const data = exportBookData(book);
+    const data = await exportBookData(book);
     await shareOrDownload(filenameFor(book.title), JSON.stringify(data, null, 2));
   });
 
@@ -102,8 +107,8 @@ export function openBookDetail(nav, bookRef, refresh) {
     const confirmSheet = openSheet("tpl-confirm-delete");
     confirmSheet.el.querySelector(".confirm-message").textContent = `Delete "${book.title || "this book"}"? This can't be undone.`;
     confirmSheet.el.querySelector(".cancel-btn").addEventListener("click", () => confirmSheet.close());
-    confirmSheet.el.querySelector(".confirm-btn").addEventListener("click", () => {
-      deleteBook(book.id);
+    confirmSheet.el.querySelector(".confirm-btn").addEventListener("click", async () => {
+      await deleteBook(book.id);
       confirmSheet.close();
       sheet.close();
       refresh();

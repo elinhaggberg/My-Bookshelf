@@ -1,5 +1,6 @@
 import { formatDate } from "./util.js";
 import { statusFor } from "./storage.js";
+import { resolveImageSrc } from "./imageStore.js";
 import { ICON_IMAGE, ICON_STAR, ICON_STAR_OUTLINE, ICON_HEADPHONES, ICON_BOOK } from "./icons.js";
 
 function starsMarkup(rating) {
@@ -17,9 +18,19 @@ export function createBookNode(book, onOpen) {
   const placeholder = node.querySelector(".pin-media-placeholder");
 
   if (book.coverImage) {
-    img.src = book.coverImage;
     img.alt = book.title || "";
-    img.classList.remove("hidden");
+    // Cover images resolve async now (a local upload lives in IndexedDB) —
+    // render the node synchronously and let the image pop in once ready,
+    // falling back to the placeholder if it can't be resolved at all.
+    resolveImageSrc(book.coverImage).then((src) => {
+      if (src) {
+        img.src = src;
+        img.classList.remove("hidden");
+      } else {
+        placeholder.innerHTML = ICON_IMAGE;
+        placeholder.classList.remove("hidden");
+      }
+    });
   } else {
     placeholder.innerHTML = ICON_IMAGE;
     placeholder.classList.remove("hidden");

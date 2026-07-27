@@ -51,7 +51,7 @@ export function renderShelf(root, nav, { status, tab, title, emptyText }) {
     if (shouldShowBackupBanner()) {
       banner.classList.remove("hidden");
       banner.querySelector("#backup-now-btn").addEventListener("click", async () => {
-        const data = exportBackupData();
+        const data = await exportBackupData();
         const stamp = new Date().toISOString().slice(0, 10);
         await shareOrDownload(`my-bookshelf-backup-${stamp}.json`, JSON.stringify(data, null, 2));
         markBackedUp();

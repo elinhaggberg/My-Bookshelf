@@ -17,7 +17,7 @@ export function openSettingsMenu(refresh) {
     openCustomize();
   });
   el.querySelector("#export-all-btn").addEventListener("click", async () => {
-    const data = exportBackupData();
+    const data = await exportBackupData();
     const stamp = new Date().toISOString().slice(0, 10);
     await shareOrDownload(`my-bookshelf-backup-${stamp}.json`, JSON.stringify(data, null, 2));
     markBackedUp();
@@ -96,7 +96,7 @@ function openImport(refresh) {
       return;
     }
     try {
-      const result = importData(parsed);
+      const result = await importData(parsed);
       let text = result.bookCount
         ? `Imported ${result.bookCount} book${result.bookCount !== 1 ? "s" : ""}.`
         : "Import complete.";

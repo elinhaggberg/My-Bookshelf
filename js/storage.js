@@ -1,3 +1,5 @@
+import { IDB_PREFIX, putImage, getImage, deleteImage, dataUrlToBlob, blobToDataUrl } from "./imageStore.js";
+
 const BOOKS_KEY = "mb_books_v1";
 const THEME_KEY = "mb_theme_v1";
 const HOME_TITLE_KEY = "mb_home_title_v1";
@@ -7,6 +9,7 @@ const LAST_BACKUP_KEY = "mb_last_backup_at_v1";
 const BACKUP_BANNER_DISMISSED_KEY = "mb_backup_banner_dismissed_at_v1";
 const FIRST_OPEN_KEY = "mb_first_open_at_v1";
 const ONBOARDING_SEEN_KEY = "mb_onboarding_seen_v1";
+const IMAGES_MIGRATED_KEY = "mb_images_migrated_v1";
 
 function uid() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -45,17 +48,37 @@ export function getBook(id) {
   return getBooks().find((b) => b.id === id) || null;
 }
 
-export function saveBook(book) {
+export async function saveBook(book) {
   const books = getBooks();
   const idx = books.findIndex((b) => b.id === book.id);
-  const withTimestamp = { ...book, updatedAt: Date.now() };
+  const previous = idx >= 0 ? books[idx] : null;
+
+  // A fresh camera/library upload arrives as a Blob (see photo.js) — move it
+  // into IndexedDB and store just a reference, since the actual bytes are
+  // too big for localStorage's tiny quota. A link's cover URL (or a
+  // re-saved idb: reference) is already a plain string and passes through
+  // untouched.
+  let coverImage = book.coverImage;
+  if (coverImage instanceof Blob) {
+    coverImage = IDB_PREFIX + book.id;
+    await putImage(book.id, book.coverImage);
+  }
+  if (previous?.coverImage?.startsWith(IDB_PREFIX) && previous.coverImage !== coverImage) {
+    await deleteImage(previous.coverImage.slice(IDB_PREFIX.length)).catch(() => {});
+  }
+
+  const withTimestamp = { ...book, coverImage, updatedAt: Date.now() };
   if (idx >= 0) books[idx] = withTimestamp;
   else books.push(withTimestamp);
   writeJSON(BOOKS_KEY, books);
   return withTimestamp;
 }
 
-export function deleteBook(id) {
+export async function deleteBook(id) {
+  const book = getBook(id);
+  if (book?.coverImage?.startsWith(IDB_PREFIX)) {
+    await deleteImage(book.coverImage.slice(IDB_PREFIX.length)).catch(() => {});
+  }
   writeJSON(BOOKS_KEY, getBooks().filter((b) => b.id !== id));
 }
 
@@ -104,40 +127,77 @@ export function getGenres() {
 
 // ---- Export / import ----
 
-export function exportBackupData() {
+// Exports inline each book's actual cover-image bytes as a data: URI
+// (resolving any idb: reference back out of IndexedDB first) so an
+// exported file is fully self-contained and portable — it doesn't depend
+// on this device's IndexedDB to be useful on another device or after a
+// reinstall.
+async function inlineImages(books) {
+  return Promise.all(
+    books.map(async (book) => {
+      if (book.coverImage?.startsWith(IDB_PREFIX)) {
+        const blob = await getImage(book.coverImage.slice(IDB_PREFIX.length));
+        if (blob) return { ...book, coverImage: await blobToDataUrl(blob) };
+      }
+      return book;
+    })
+  );
+}
+
+export async function exportBackupData() {
   return {
     type: "backup",
     version: 1,
     exportedAt: new Date().toISOString(),
-    books: getBooks(),
+    books: await inlineImages(getBooks()),
     theme: getThemePref(),
     homeTitle: getHomeTitle(),
   };
 }
 
-export function exportBookData(book) {
+export async function exportBookData(book) {
   return {
     type: "book",
     version: 1,
     exportedAt: new Date().toISOString(),
-    books: [book],
+    books: await inlineImages([book]),
   };
 }
 
 // Always merges (adds new entries) rather than replacing anything, so a bad
 // or repeated import can't destroy existing data — every imported book is
 // given a fresh id and added alongside whatever's already saved.
-export function importData(data) {
+export async function importData(data) {
   if (!data || !["backup", "book"].includes(data.type) || !Array.isArray(data.books)) {
     throw new Error("That doesn't look like a My Bookshelf export file.");
   }
 
-  const newBooks = data.books.map((b) => ({
-    ...createEmptyBook(),
-    ...b,
-    id: uid(),
-    createdAt: Date.now(),
-  }));
+  // An imported book's cover is a plain data: URI (inlined at export time,
+  // see inlineImages above) — move it straight into IndexedDB rather than
+  // leaving it sitting in localStorage, so importing a backup doesn't
+  // immediately blow past the same quota this whole store exists to avoid.
+  const newBooks = await Promise.all(
+    data.books.map(async (b) => {
+      const id = uid();
+      let coverImage = b.coverImage;
+      if (typeof coverImage === "string" && coverImage.startsWith("data:")) {
+        try {
+          await putImage(id, await dataUrlToBlob(coverImage));
+          coverImage = IDB_PREFIX + id;
+        } catch {
+          // Couldn't decode/store it — fall back to keeping the raw
+          // data: URI so the book still imports with its cover intact.
+        }
+      }
+      return {
+        ...createEmptyBook(),
+        ...b,
+        id,
+        coverImage,
+        createdAt: Date.now(),
+      };
+    })
+  );
   writeJSON(BOOKS_KEY, [...getBooks(), ...newBooks]);
 
   // Theme and home title are single current-state settings, not a list, so
@@ -235,6 +295,39 @@ export function getOnboardingSeen() {
 
 export function setOnboardingSeen() {
   localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
+}
+
+// One-time cleanup for anyone who saved cover photos before this store
+// existed — their images are sitting in localStorage as huge inline data:
+// URIs, which is exactly what fills up the quota. Moves each into
+// IndexedDB and rewrites the book to reference it instead. Runs once
+// (gated by a flag) and skips any book it can't process rather than
+// letting one bad image block startup.
+// Cheap, synchronous check for whether the migration below actually has
+// anything to do — lets the caller (migrationNotice.js) decide whether to
+// say anything, without needing to await the migration itself first.
+export function hasLegacyImages() {
+  return getBooks().some((b) => typeof b.coverImage === "string" && b.coverImage.startsWith("data:"));
+}
+
+export async function migrateImagesToIndexedDB() {
+  if (localStorage.getItem(IMAGES_MIGRATED_KEY) === "true") return;
+  const books = getBooks();
+  let changed = false;
+  for (let i = 0; i < books.length; i++) {
+    const book = books[i];
+    if (typeof book.coverImage === "string" && book.coverImage.startsWith("data:")) {
+      try {
+        await putImage(book.id, await dataUrlToBlob(book.coverImage));
+        books[i] = { ...book, coverImage: IDB_PREFIX + book.id };
+        changed = true;
+      } catch {
+        // Leave this one as-is and keep going with the rest.
+      }
+    }
+  }
+  if (changed) writeJSON(BOOKS_KEY, books);
+  localStorage.setItem(IMAGES_MIGRATED_KEY, "true");
 }
 
 export { uid };

@@ -24,7 +24,11 @@ export function readAndResizeImage(file) {
         canvas.width = width;
         canvas.height = height;
         canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Couldn't process that image."))),
+          "image/jpeg",
+          JPEG_QUALITY
+        );
       };
       img.src = reader.result;
     };
