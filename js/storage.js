@@ -124,6 +124,30 @@ export function exportBookData(book) {
   };
 }
 
+// A malformed or hand-edited export file shouldn't be able to wedge the
+// app -- genres in particular gets iterated with for...of and .some()
+// elsewhere (getGenres, search, filter), which throws on every future
+// render if it's not actually an array. Coerce each field to the type the
+// rest of the app assumes rather than trusting the file, same "never
+// trust the file" treatment as everywhere else user data gets rendered.
+function sanitizeImportedBook(b) {
+  const src = b && typeof b === "object" ? b : {};
+  const asString = (v) => (typeof v === "string" ? v : "");
+  return {
+    title: asString(src.title),
+    author: asString(src.author),
+    coverImage: asString(src.coverImage),
+    url: asString(src.url),
+    siteName: asString(src.siteName),
+    genres: Array.isArray(src.genres) ? src.genres.filter((g) => typeof g === "string") : [],
+    format: src.format === "audiobook" ? "audiobook" : "physical",
+    rating: typeof src.rating === "number" && Number.isFinite(src.rating) ? src.rating : 0,
+    note: asString(src.note),
+    startedAt: asString(src.startedAt),
+    finishedAt: asString(src.finishedAt),
+  };
+}
+
 // Always merges (adds new entries) rather than replacing anything, so a bad
 // or repeated import can't destroy existing data — every imported book is
 // given a fresh id and added alongside whatever's already saved.
@@ -134,7 +158,7 @@ export function importData(data) {
 
   const newBooks = data.books.map((b) => ({
     ...createEmptyBook(),
-    ...b,
+    ...sanitizeImportedBook(b),
     id: uid(),
     createdAt: Date.now(),
   }));
