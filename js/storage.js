@@ -164,6 +164,30 @@ export async function exportBookData(book) {
   };
 }
 
+// A malformed or hand-edited export file shouldn't be able to wedge the
+// app -- genres in particular gets iterated with for...of and .some()
+// elsewhere (getGenres, search, filter), which throws on every future
+// render if it's not actually an array. Coerce each field to the type the
+// rest of the app assumes rather than trusting the file, same "never
+// trust the file" treatment as everywhere else user data gets rendered.
+function sanitizeImportedBook(b) {
+  const src = b && typeof b === "object" ? b : {};
+  const asString = (v) => (typeof v === "string" ? v : "");
+  return {
+    title: asString(src.title),
+    author: asString(src.author),
+    coverImage: asString(src.coverImage),
+    url: asString(src.url),
+    siteName: asString(src.siteName),
+    genres: Array.isArray(src.genres) ? src.genres.filter((g) => typeof g === "string") : [],
+    format: src.format === "audiobook" ? "audiobook" : "physical",
+    rating: typeof src.rating === "number" && Number.isFinite(src.rating) ? src.rating : 0,
+    note: asString(src.note),
+    startedAt: asString(src.startedAt),
+    finishedAt: asString(src.finishedAt),
+  };
+}
+
 // Always merges (adds new entries) rather than replacing anything, so a bad
 // or repeated import can't destroy existing data — every imported book is
 // given a fresh id and added alongside whatever's already saved.
@@ -179,8 +203,9 @@ export async function importData(data) {
   const newBooks = await Promise.all(
     data.books.map(async (b) => {
       const id = uid();
-      let coverImage = b.coverImage;
-      if (typeof coverImage === "string" && coverImage.startsWith("data:")) {
+      const sanitized = sanitizeImportedBook(b);
+      let coverImage = sanitized.coverImage;
+      if (coverImage.startsWith("data:")) {
         try {
           await putImage(id, await dataUrlToBlob(coverImage));
           coverImage = IDB_PREFIX + id;
@@ -191,7 +216,7 @@ export async function importData(data) {
       }
       return {
         ...createEmptyBook(),
-        ...b,
+        ...sanitized,
         id,
         coverImage,
         createdAt: Date.now(),
