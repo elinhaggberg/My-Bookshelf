@@ -23,7 +23,13 @@ import {
   getWizardStep,
   setWizardStep,
 } from "./supabaseOAuth.js";
-import { installCloudSync, getInstallSteps, getInstalledFeatures } from "./cloudSyncInstall.js";
+import {
+  installCloudSync,
+  getInstallSteps,
+  getInstalledFeatures,
+  checkExistingBackupSetup,
+  joinExistingBackup,
+} from "./cloudSyncInstall.js";
 import { isBackupConfigured, getPairingCode, getLastSyncedDisplay, syncNow, applyPairingCode } from "./cloudBackup.js";
 import { ICON_CHECK } from "./icons.js";
 
@@ -138,6 +144,10 @@ export function openCloudSyncSheet(oauthResult) {
   const installSectionEl = el.querySelector("#cloud-sync-install-section");
   const installStepsEl = el.querySelector("#cloud-sync-install-steps");
   const installBtn = el.querySelector("#cloud-sync-install-btn");
+  const joinSectionEl = el.querySelector("#cloud-sync-join-section");
+  const joinPassphraseInput = el.querySelector("#cloud-sync-join-passphrase");
+  const joinMessageEl = el.querySelector("#cloud-sync-join-message");
+  const joinBtn = el.querySelector("#cloud-sync-join-btn");
   const backupSectionEl = el.querySelector("#cloud-sync-backup-section");
   const lastSyncedEl = el.querySelector("#cloud-sync-last-synced");
   const syncNowBtn = el.querySelector("#cloud-sync-sync-now-btn");
@@ -218,6 +228,40 @@ export function openCloudSyncSheet(oauthResult) {
     }
   }
 
+  // The "another app/device already set this project up" path -- verifies
+  // the entered passphrase live (see joinExistingBackup's own comment) so a
+  // typo shows up immediately as "that's not right," rather than silently
+  // failing every sync afterward.
+  async function runJoin() {
+    const passphrase = joinPassphraseInput.value.trim();
+    if (!passphrase) return;
+    setButtonBusy(joinBtn, "Connecting…");
+    joinMessageEl.classList.add("hidden");
+    try {
+      const result = await joinExistingBackup(passphrase);
+      if (result === false) {
+        joinMessageEl.textContent = "That doesn't look like the right passphrase. Please try again.";
+        joinMessageEl.classList.remove("hidden");
+        joinMessageEl.classList.add("error");
+        return;
+      }
+      if (result === null) {
+        joinMessageEl.textContent = "Couldn't reach the project right now. Please try again.";
+        joinMessageEl.classList.remove("hidden");
+        joinMessageEl.classList.add("error");
+        return;
+      }
+      await render();
+      await runSyncNow();
+    } catch (err) {
+      joinMessageEl.textContent = err.message || "Something went wrong. Please try again.";
+      joinMessageEl.classList.remove("hidden");
+      joinMessageEl.classList.add("error");
+    } finally {
+      restoreButton(joinBtn, "Add this app");
+    }
+  }
+
   function renderLastSynced() {
     const last = getLastSyncedDisplay();
     lastSyncedEl.textContent = last ? `Last synced ${last.toLocaleString()}.` : "Not synced yet.";
@@ -288,21 +332,23 @@ export function openCloudSyncSheet(oauthResult) {
     statusLine.textContent = "";
     pickerEl.replaceChildren();
     installSectionEl.classList.add("hidden");
+    joinSectionEl.classList.add("hidden");
     backupSectionEl.classList.add("hidden");
     featureSummaryEl.classList.add("hidden");
     manageToggleRowEl.classList.add("hidden");
 
     const projects = await listSupabaseProjects();
     const selected = getSelectedProject();
-    loadingEl.classList.add("hidden");
 
     if (!projects || !Array.isArray(projects)) {
+      loadingEl.classList.add("hidden");
       statusLine.textContent = "✓ Connected";
       pickerEl.replaceChildren();
       installSectionEl.classList.add("hidden");
       return;
     }
     if (projects.length === 0) {
+      loadingEl.classList.add("hidden");
       statusLine.textContent = "✓ Connected — no projects found on this account yet.";
       pickerEl.replaceChildren();
       installSectionEl.classList.add("hidden");
@@ -328,15 +374,42 @@ export function openCloudSyncSheet(oauthResult) {
       })
     );
 
-    installSectionEl.classList.toggle("hidden", !selected);
     let installed = { backup: false };
+    // Whether this project already has Cloud Backup's function deployed --
+    // by another Make It Local app, or this same app on a different device
+    // -- so installing here shouldn't blindly generate a new passphrase and
+    // overwrite the one whatever set this up is already using. Only worth
+    // checking (a real network call) when this device hasn't itself
+    // already installed backup here -- kept under the same loading spinner
+    // as the project list fetch above, so picking a project doesn't flash
+    // the install section before swapping to the join one.
+    let joinableBackup = false;
     if (selected) {
       installed = getInstalledFeatures(selected.ref);
+      if (!installed.backup) {
+        try {
+          joinableBackup = await checkExistingBackupSetup(selected.ref);
+        } catch {
+          joinableBackup = false;
+        }
+      }
+    }
+    loadingEl.classList.add("hidden");
+
+    const showJoin = Boolean(selected) && !installed.backup && joinableBackup;
+    const showInstall = Boolean(selected) && !showJoin;
+    installSectionEl.classList.toggle("hidden", !showInstall);
+    joinSectionEl.classList.toggle("hidden", !showJoin);
+    if (showInstall) {
       // Left enabled even once installed -- re-running install is
       // idempotent (every step is an upsert, see cloudSyncInstall.js), and
       // it's the only way an existing install picks up new backup steps
       // added later, like the image-sync function.
       renderSteps(new Map(getInstallSteps().map((label) => [label, "done"])));
+    }
+    if (showJoin) {
+      joinMessageEl.classList.add("hidden");
+      joinPassphraseInput.value = "";
     }
     backupSectionEl.classList.toggle("hidden", !installed.backup || !isBackupConfigured());
     if (installed.backup) {
@@ -374,6 +447,7 @@ export function openCloudSyncSheet(oauthResult) {
     render();
   });
   installBtn.addEventListener("click", runInstall);
+  joinBtn.addEventListener("click", runJoin);
 
   render();
 }
