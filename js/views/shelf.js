@@ -83,6 +83,7 @@ export function renderShelf(root, nav, { status, tab, title, emptyText }) {
     const grid = document.getElementById("shelf-grid");
     const books = applyFilterSort(getBooksByStatus(status), getFilterSortPref(), status);
     if (books.length === 0) {
+      resetLazyGrid();
       const empty = document.createElement("p");
       empty.className = "empty-state";
       empty.textContent = emptyText;
