@@ -6,13 +6,11 @@
 // reaches this file -- it stays server-side in api/oauth-callback.js and
 // api/oauth-refresh.js, which is the only reason those two functions exist.
 //
-// TODO: register a dedicated Supabase OAuth application for My Bookshelf
-// (redirect URI `${this app's own domain}/api/oauth-callback`) and replace
-// this placeholder with its real client_id -- must match the CLIENT_ID
+// Registered Supabase OAuth application for My Bookshelf (redirect URI is
+// this app's own domain + /api/oauth-callback) -- must match the CLIENT_ID
 // constant in api/oauth-callback.js and api/oauth-refresh.js exactly, all
-// three are meant to be the same value. "Connect Supabase" will fail until
-// this is filled in.
-const CLIENT_ID = "TODO_MY_BOOKSHELF_SUPABASE_OAUTH_CLIENT_ID";
+// three are meant to be the same value.
+const CLIENT_ID = "dfa06786-e48c-4956-8908-e5465e5cd02b";
 const TOKEN_KEY = "mb_supabase_oauth_v1";
 const STATE_KEY = "mb_supabase_oauth_state_v1";
 const PROJECT_KEY = "mb_supabase_project_v1";

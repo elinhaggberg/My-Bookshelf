@@ -3,8 +3,8 @@
 // by js/supabaseOAuth.js whenever the locally-stored access token has
 // expired, right before a Management API call needs a valid one.
 
-// See oauth-callback.js's TODO -- this must be the exact same client_id.
-const CLIENT_ID = "TODO_MY_BOOKSHELF_SUPABASE_OAUTH_CLIENT_ID";
+// See oauth-callback.js -- this must be the exact same client_id.
+const CLIENT_ID = "dfa06786-e48c-4956-8908-e5465e5cd02b";
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
