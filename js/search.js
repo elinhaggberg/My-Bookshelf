@@ -1,6 +1,7 @@
 import { getBooks, statusFor } from "./storage.js";
 import { openSheet } from "./sheet.js";
 import { renderMasonry } from "./masonry.js";
+import { resetLazyGrid } from "./lazyImage.js";
 import { createBookNode } from "./bookCard.js";
 import { openBookDetail } from "./bookDetail.js";
 
@@ -38,6 +39,7 @@ export function openSearch(nav, refresh) {
       return;
     }
     emptyEl.classList.add("hidden");
+    resetLazyGrid();
     renderMasonry(resultsEl, matches, (book) => {
       const node = createBookNode(book, (b) => openBookDetail(nav, b, () => {
         runSearch();

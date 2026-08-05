@@ -6,11 +6,14 @@ import {
   markBackedUp,
   dismissBackupBanner,
   shouldShowBackupBanner,
+  shouldShowStorageWarning,
+  dismissStorageWarningBanner,
 } from "../storage.js";
 import { shareOrDownload } from "../share.js";
 import { createBookNode } from "../bookCard.js";
 import { renderTabbar } from "../tabbar.js";
 import { renderMasonry } from "../masonry.js";
+import { resetLazyGrid } from "../lazyImage.js";
 import { openAddBook } from "../bookEditor.js";
 import { openBookDetail } from "../bookDetail.js";
 import { openSettingsMenu } from "../settingsMenu.js";
@@ -45,7 +48,8 @@ export function renderShelf(root, nav, { status, tab, title, emptyText }) {
   renderList();
 
   // Only Home (not To Read / Reading, which reuse this same shelf) shows the
-  // backup reminder, so it's not repeated three times across tabs.
+  // backup reminder and storage warning, so neither is repeated three times
+  // across tabs.
   if (tab === "home") {
     const banner = document.getElementById("backup-banner");
     if (shouldShowBackupBanner()) {
@@ -62,6 +66,16 @@ export function renderShelf(root, nav, { status, tab, title, emptyText }) {
         banner.classList.add("hidden");
       });
     }
+
+    const storageBanner = document.getElementById("storage-warning-banner");
+    shouldShowStorageWarning().then((shouldShow) => {
+      if (!shouldShow) return;
+      storageBanner.classList.remove("hidden");
+      storageBanner.querySelector("#storage-warning-dismiss-btn").addEventListener("click", () => {
+        dismissStorageWarningBanner();
+        storageBanner.classList.add("hidden");
+      });
+    });
   }
 
   function renderList() {
@@ -75,6 +89,7 @@ export function renderShelf(root, nav, { status, tab, title, emptyText }) {
       grid.replaceChildren(empty);
       return;
     }
+    resetLazyGrid();
     renderMasonry(grid, books, (book) => createBookNode(book, (b) => openBookDetail(nav, b, renderList)));
   }
 }

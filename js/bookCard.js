@@ -1,6 +1,6 @@
 import { formatDate } from "./util.js";
 import { statusFor } from "./storage.js";
-import { resolveImageSrc } from "./imageStore.js";
+import { lazyLoadImage } from "./lazyImage.js";
 import { ICON_IMAGE, ICON_STAR, ICON_STAR_OUTLINE, ICON_HEADPHONES, ICON_BOOK } from "./icons.js";
 
 function starsMarkup(rating) {
@@ -19,17 +19,17 @@ export function createBookNode(book, onOpen) {
 
   if (book.coverImage) {
     img.alt = book.title || "";
-    // Cover images resolve async now (a local upload lives in IndexedDB) —
-    // render the node synchronously and let the image pop in once ready,
-    // falling back to the placeholder if it can't be resolved at all.
-    resolveImageSrc(book.coverImage).then((src) => {
-      if (src) {
-        img.src = src;
-        img.classList.remove("hidden");
-      } else {
-        placeholder.innerHTML = ICON_IMAGE;
-        placeholder.classList.remove("hidden");
-      }
+    // lazyLoadImage defers the actual resolve (an IndexedDB read for a
+    // local upload) until the card scrolls near the viewport, but still
+    // shows the image element immediately with its aspect-ratio reserved
+    // (see style.css) -- otherwise masonry.js's column-balancing
+    // measurement runs before any image has rendered and badly misjudges
+    // which column is shortest. Falls back to the placeholder only if
+    // resolution fails.
+    lazyLoadImage(img, book.coverImage, () => {
+      img.classList.add("hidden");
+      placeholder.innerHTML = ICON_IMAGE;
+      placeholder.classList.remove("hidden");
     });
   } else {
     placeholder.innerHTML = ICON_IMAGE;
