@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-bookshelf-v4";
+const CACHE_NAME = "my-bookshelf-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./js/app.js",
   "./js/storage.js",
   "./js/imageStore.js",
+  "./js/lazyImage.js",
   "./js/theme.js",
   "./js/util.js",
   "./js/sheet.js",
