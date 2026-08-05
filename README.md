@@ -19,16 +19,20 @@ Rate any book 1–5 stars, tag it with a genre and mark it physical or audiobook
 - **Search**: one search across every book you've logged, regardless of shelf.
 - **Backup & sharing**: export a single book or a full backup as a JSON file; import always merges, never replaces.
 - **Customize**: Playful/Light/Dark themes with a choice of accent colors, plus a custom home screen title.
+- **Cloud Backup** *(optional add-on)*: connect your own free Supabase project (via OAuth, no manual setup) for a full, passphrase-protected cloud backup and sync of your books, cover photos included — see `supabase/CLOUD_BACKUP_SETUP.md`. Off by default; the app works fully without it, and multiple Make It Local apps can share one Supabase project instead of needing one each.
 
 ## Architecture
 
-No build step — plain HTML/CSS/JS modules, same approach as [My Closet](https://github.com/elinhaggberg/My-Closet). All data lives in `localStorage` on the device.
+No build step — plain HTML/CSS/JS modules, same approach as [My Closet](https://github.com/elinhaggberg/My-Closet). All data lives in `localStorage`, with cover photos in IndexedDB, on the device.
 
-The only server-side piece is `api/unfurl.js`, a stateless Vercel serverless function that fetches a pasted URL server-side (the browser can't read cross-origin HTML itself) and extracts Open Graph / JSON-LD metadata to build the card. It stores nothing — no database, no accounts. That keeps the "no data collection" promise true even with a link-preview feature.
+Two kinds of server-side pieces, both stateless and both optional except the first:
+
+- `api/unfurl.js` — always active, a stateless Vercel serverless function that fetches a pasted URL server-side (the browser can't read cross-origin HTML itself) and extracts Open Graph / JSON-LD metadata to build the card. Stores nothing — no database, no accounts. That keeps the "no data collection" promise true even with a link-preview feature.
+- `api/oauth-*.js` and `api/cloud-sync-*.js` — inert unless Cloud Backup is turned on; thin proxies to Supabase's OAuth and Management API so the browser never needs Supabase's own API credentials directly. See `supabase/CLOUD_BACKUP_SETUP.md` if you're forking this repo and want Cloud Backup working on your own deployment — it needs a one-time OAuth application registration that can't be automated.
 
 ## Deploying
 
-Deploy straight from this repo on [Vercel](https://vercel.com) — no configuration needed. It auto-detects the static site plus the `api/` serverless function.
+Deploy straight from this repo on [Vercel](https://vercel.com) — no configuration needed. It auto-detects the static site plus the `api/` serverless functions.
 
 ## License
 
