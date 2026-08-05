@@ -30,7 +30,14 @@ import {
   checkExistingBackupSetup,
   joinExistingBackup,
 } from "./cloudSyncInstall.js";
-import { isBackupConfigured, getPairingCode, getLastSyncedDisplay, syncNow, applyPairingCode } from "./cloudBackup.js";
+import {
+  isBackupConfigured,
+  getPairingCode,
+  getBackupPassphrase,
+  getLastSyncedDisplay,
+  syncNow,
+  applyPairingCode,
+} from "./cloudBackup.js";
 import { ICON_CHECK } from "./icons.js";
 
 const STORAGE_FNS = { getBooks, upsertRecords, getTombstones, clearTombstones, applyRemoteDeletion };
@@ -156,6 +163,8 @@ export function openCloudSyncSheet(oauthResult) {
   const pairingCodeEl = el.querySelector("#cloud-sync-pairing-code");
   const copyPairingActionsEl = el.querySelector("#cloud-sync-copy-pairing-actions");
   const copyPairingBtn = el.querySelector("#cloud-sync-copy-pairing-btn");
+  const passphraseBoxEl = el.querySelector("#cloud-sync-passphrase-box");
+  const copyPassphraseBtn = el.querySelector("#cloud-sync-copy-passphrase-btn");
 
   // Once Cloud Backup is actually installed, the project picker / install
   // steps / Disconnect are mostly one-time setup noise, not something worth
@@ -303,6 +312,28 @@ export function openCloudSyncSheet(oauthResult) {
       copyPairingBtn.textContent = "Copy pairing code";
     }, 2000);
   });
+  // The bare passphrase, distinct from the pairing code above -- for
+  // handing to another Make It Local app's "Add this app" join screen
+  // (see cloudSyncInstall.js's joinExistingBackup), which already has this
+  // project's URL/key from its own OAuth connection and only needs this
+  // one piece, not the full three-field bundle a totally separate device
+  // would need.
+  copyPassphraseBtn.addEventListener("click", async () => {
+    const passphrase = getBackupPassphrase();
+    if (!passphrase) return;
+    passphraseBoxEl.value = passphrase;
+    passphraseBoxEl.classList.remove("hidden");
+    try {
+      await navigator.clipboard.writeText(passphrase);
+      copyPassphraseBtn.textContent = "Copied!";
+    } catch {
+      passphraseBoxEl.select();
+      copyPassphraseBtn.textContent = "Select and copy manually";
+    }
+    setTimeout(() => {
+      copyPassphraseBtn.textContent = "Copy passphrase";
+    }, 2000);
+  });
   syncNowBtn.addEventListener("click", runSyncNow);
 
   async function render() {
@@ -417,6 +448,7 @@ export function openCloudSyncSheet(oauthResult) {
       backupMessageEl.classList.add("hidden");
       pairingCodeEl.classList.add("hidden");
       copyPairingActionsEl.classList.add("hidden");
+      passphraseBoxEl.classList.add("hidden");
     }
 
     featureSummaryEl.replaceChildren(
