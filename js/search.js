@@ -19,6 +19,7 @@ export function openSearch(nav, refresh) {
   function runSearch() {
     const q = input.value.trim().toLowerCase();
     if (!q) {
+      resetLazyGrid();
       resultsEl.replaceChildren();
       emptyEl.textContent = "Start typing to search your books.";
       emptyEl.classList.remove("hidden");
@@ -33,6 +34,7 @@ export function openSearch(nav, refresh) {
       );
     });
     if (matches.length === 0) {
+      resetLazyGrid();
       resultsEl.replaceChildren();
       emptyEl.textContent = "No books match that search.";
       emptyEl.classList.remove("hidden");
