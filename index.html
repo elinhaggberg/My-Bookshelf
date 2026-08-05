@@ -248,6 +248,10 @@
         <svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M64 0C28.7 0 0 28.7 0 64l0 240 182.1 0-31-31c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l72 72c9.4 9.4 9.4 24.6 0 33.9l-72 72c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l31-31-182.1 0 0 96c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-277.5c0-17-6.7-33.3-18.7-45.3L258.7 18.7C246.7 6.7 230.5 0 213.5 0L64 0zM325.5 176L232 176c-13.3 0-24-10.7-24-24L208 58.5 325.5 176z"/></svg>
         <span>Import</span>
       </button>
+      <button type="button" class="menu-item" id="cloud-sync-btn">
+        <svg class="icon" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="M144 224c-53 0-96 43-96 96s43 96 96 96l288 0c44.2 0 80-35.8 80-80c0-38.8-27.6-71.1-64.3-78.4c.2-2.5 .3-5 .3-7.6c0-53-43-96-96-96c-19.6 0-37.9 5.9-53.1 16.1C185.5 130.6 145.5 96 96 96C43 96 0 139 0 192c0 20.3 6.3 39.1 17 54.6C7.4 261.3 0 279.5 0 300z"/></svg>
+        <span>Cloud sync</span>
+      </button>
       <button type="button" class="menu-item" id="app-library-link-btn">
         <svg class="icon" viewBox="0 0 448 512" aria-hidden="true" focusable="false"><path d="M64 32C28.7 32 0 60.7 0 96l0 64c0 35.3 28.7 64 64 64l64 0c35.3 0 64-28.7 64-64l0-64c0-35.3-28.7-64-64-64L64 32zM64 224c-35.3 0-64 28.7-64 64l0 64c0 35.3 28.7 64 64 64l64 0c35.3 0 64-28.7 64-64l0-64c0-35.3-28.7-64-64-64l-64 0zM256 96l0 64c0 35.3 28.7 64 64 64l64 0c35.3 0 64-28.7 64-64l0-64c0-35.3-28.7-64-64-64l-64 0c-35.3 0-64 28.7-64 64zM320 224c-35.3 0-64 28.7-64 64l0 64c0 35.3 28.7 64 64 64l64 0c35.3 0 64-28.7 64-64l0-64c0-35.3-28.7-64-64-64l-64 0z"/></svg>
         <span>App Library</span>
@@ -427,6 +431,122 @@
       <div class="form-actions">
         <button type="button" class="text-btn secondary cancel-btn">Close</button>
         <a class="text-btn primary" href="https://makeitlocal.app" target="_blank" rel="noopener">Visit library</a>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-cloud-sync">
+    <div class="sheet">
+      <header class="sheet-header">
+        <h2>Cloud sync</h2>
+        <button class="icon-btn close-btn" aria-label="Close"><svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg></button>
+      </header>
+      <p class="cloud-sync-intro">Optional and off by default. My Bookshelf never hosts your data — connect your own free Supabase project instead, to enable a full cloud backup, without giving up the local-first design.</p>
+      <p class="import-message hidden" id="cloud-sync-message"></p>
+      <div class="hidden" id="cloud-sync-disconnected">
+        <div id="cloud-wizard-step-1">
+          <p class="card-detail-section-label">Step 1 of 3</p>
+          <h3>Create a free Supabase account</h3>
+          <p class="cloud-sync-intro">Supabase hosts your own private database — free, no credit card needed. My Bookshelf never sees or stores this data itself; it only ever talks to the one project you create and connect below.</p>
+          <div class="form-actions">
+            <a class="text-btn secondary" href="https://supabase.com/dashboard/sign-up" target="_blank" rel="noopener">Open supabase.com</a>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="text-btn primary" id="cloud-wizard-step1-continue-btn">Continue</button>
+          </div>
+        </div>
+        <div class="hidden" id="cloud-wizard-step-2">
+          <p class="card-detail-section-label">Step 2 of 3</p>
+          <h3>Create a new project</h3>
+          <p class="cloud-sync-intro">In your Supabase dashboard, click <strong>New project</strong>. Name it anything (e.g. "my-bookshelf"), pick any region, and set a database password — the free tier is more than enough for this.</p>
+          <div class="form-actions">
+            <button type="button" class="text-btn primary" id="cloud-wizard-step2-continue-btn">Continue</button>
+          </div>
+          <p class="cloud-sync-intro"><button type="button" class="text-btn-inline" id="cloud-wizard-step2-back-btn">Back</button></p>
+        </div>
+        <div class="hidden" id="cloud-wizard-step-3">
+          <p class="card-detail-section-label">Step 3 of 3</p>
+          <h3>Connect your project</h3>
+          <p class="cloud-sync-intro">Supabase will ask you to approve access, then you'll pick which specific project is My Bookshelf's on the next screen — the approval covers your whole account, not just one project.</p>
+          <div class="form-actions">
+            <button type="button" class="text-btn primary" id="cloud-sync-connect-btn">Connect Supabase</button>
+          </div>
+          <p class="cloud-sync-intro"><button type="button" class="text-btn-inline" id="cloud-wizard-step3-back-btn">Back</button></p>
+        </div>
+        <div class="cloud-sync-restore-section">
+          <p class="card-detail-section-label">Already set up elsewhere?</p>
+          <p class="cloud-sync-intro">If another device already has Cloud Backup running, you can pull your data down here instead — no Supabase login needed on this device.</p>
+          <div class="form-actions">
+            <button type="button" class="text-btn secondary" id="cloud-sync-restore-btn">Restore from Cloud</button>
+          </div>
+        </div>
+      </div>
+      <div class="hidden" id="cloud-sync-connected">
+        <p class="cloud-sync-status hidden" id="cloud-sync-loading"><span class="btn-spinner" aria-hidden="true"></span>Loading your Supabase projects…</p>
+        <p class="cloud-sync-status" id="cloud-sync-status-line"></p>
+        <div class="cloud-sync-feature-summary hidden" id="cloud-sync-feature-summary"></div>
+
+        <div class="hidden" id="cloud-sync-backup-section">
+          <p class="card-detail-section-label" style="margin-top:8px;">Cloud Backup</p>
+          <p class="cloud-sync-intro" id="cloud-sync-last-synced"></p>
+          <p class="import-message hidden" id="cloud-sync-backup-message"></p>
+          <div class="form-actions">
+            <button type="button" class="text-btn secondary" id="cloud-sync-sync-now-btn">Sync now</button>
+            <button type="button" class="text-btn secondary" id="cloud-sync-show-pairing-btn">Show pairing code</button>
+          </div>
+          <textarea class="pairing-code-box hidden" id="cloud-sync-pairing-code" rows="3" readonly></textarea>
+          <div class="form-actions hidden" id="cloud-sync-copy-pairing-actions">
+            <button type="button" class="text-btn secondary" id="cloud-sync-copy-pairing-btn">Copy pairing code</button>
+          </div>
+        </div>
+
+        <div class="hidden form-actions" id="cloud-sync-manage-toggle-row">
+          <button type="button" class="text-btn secondary" id="cloud-sync-manage-btn">Manage connection</button>
+        </div>
+        <div id="cloud-sync-manage-section">
+          <div class="project-picker-list" id="cloud-sync-project-picker"></div>
+          <div class="hidden" id="cloud-sync-join-section">
+            <p class="card-detail-section-label" style="margin-top:8px;">Cloud Backup</p>
+            <p class="cloud-sync-intro">This project already has Cloud Backup set up — probably from another Make It Local app, or this same app on another device. Enter its passphrase to add this app to it, no new setup needed.</p>
+            <label class="field">
+              <span>Backup passphrase</span>
+              <input type="text" id="cloud-sync-join-passphrase" autocomplete="off" autocapitalize="off" spellcheck="false" />
+            </label>
+            <p class="import-message hidden" id="cloud-sync-join-message"></p>
+            <div class="form-actions">
+              <button type="button" class="text-btn primary" id="cloud-sync-join-btn">Add this app</button>
+            </div>
+          </div>
+          <div class="hidden" id="cloud-sync-install-section">
+            <p class="card-detail-section-label" style="margin-top:8px;">Cloud Backup</p>
+            <p class="cloud-sync-intro">Backs up and syncs all your books, including cover photos, to your own Supabase project.</p>
+            <div class="cloud-sync-steps" id="cloud-sync-install-steps"></div>
+            <div class="form-actions">
+              <button type="button" class="text-btn primary" id="cloud-sync-install-btn">Install Cloud Backup</button>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="text-btn secondary" id="cloud-sync-disconnect-btn">Disconnect</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-cloud-restore">
+    <div class="sheet">
+      <header class="sheet-header">
+        <h2>Restore from Cloud</h2>
+        <button class="icon-btn close-btn" aria-label="Close"><svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg></button>
+      </header>
+      <p class="cloud-sync-intro">Paste the pairing code from a device where Cloud Backup is already set up. This device doesn't need its own Supabase login — treat the code like a password, since it grants full access to your backup data.</p>
+      <label class="field">
+        <span>Pairing code</span>
+        <textarea id="cloud-restore-code" rows="4" placeholder="Paste the code here…"></textarea>
+      </label>
+      <p class="import-message hidden" id="cloud-restore-message"></p>
+      <div class="form-actions">
+        <button type="button" class="text-btn primary" id="cloud-restore-apply-btn">Restore</button>
       </div>
     </div>
   </template>

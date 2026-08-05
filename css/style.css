@@ -140,6 +140,26 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .text-btn.secondary { color: var(--text-dim); border: 1px solid var(--border); }
 .text-btn.danger { color: #fff; background: var(--danger); }
 .text-btn:active { opacity: 0.8; }
+/* Declared after .primary/.secondary/.danger so it wins the tie -- a
+   button mid-async-work (install, sync, link fetch) should read as "busy,"
+   not just inert, since disabled alone looked identical to normal and gave
+   no sign anything was happening. */
+.text-btn:disabled { cursor: not-allowed; }
+.text-btn.loading { background: var(--surface-2); color: var(--text-dim); border-color: var(--border); }
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
 
 /* Topbar */
 .topbar {
@@ -698,6 +718,74 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .import-message.error { color: var(--danger); }
 
 .hidden { display: none !important; }
+
+/* Cloud sync */
+.sheet .card-detail-section-label { padding: 0; }
+#cloud-sync-disconnected h3 { font-size: 1.05rem; margin: 0 0 8px; }
+.cloud-sync-restore-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+
+.text-btn-inline {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--text-dim);
+  text-decoration: underline;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.cloud-sync-intro { color: var(--text-dim); font-size: 0.92rem; margin: 0 0 18px; }
+.cloud-sync-status { color: var(--good); font-weight: 600; margin: 0 0 12px; }
+
+.cloud-sync-feature-summary { display: flex; flex-direction: column; gap: 4px; margin: -6px 0 14px; }
+.cloud-sync-feature-summary-row { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--text-dim); }
+.cloud-sync-feature-summary-row .icon { width: 14px; height: 14px; color: var(--good); flex-shrink: 0; }
+
+/* The OAuth connection is granted per-organization, not per-project, so it
+   can see every project in that org (e.g. a sibling app's) -- this list is
+   how the user explicitly says which one is My Bookshelf's, rather than the
+   app silently assuming the first (or only) one it can see. */
+.project-picker-list { display: flex; flex-direction: column; gap: 8px; margin: 0 0 18px; }
+.project-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  width: 100%;
+  font-weight: 600;
+}
+.project-picker-row.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.project-picker-row .icon { width: 1.1rem; height: 1.1rem; color: var(--accent); visibility: hidden; flex-shrink: 0; }
+.project-picker-row.active .icon { visibility: visible; }
+
+.cloud-sync-steps { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px; }
+.cloud-sync-step { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-dim); }
+.cloud-sync-step-mark { width: 1.2em; flex-shrink: 0; text-align: center; font-weight: 700; }
+.cloud-sync-step.running { color: var(--accent); }
+.cloud-sync-step.done { color: var(--good); }
+.cloud-sync-step.error { color: var(--danger); }
+.cloud-sync-step-error { margin: -4px 0 0 1.9em; font-size: 0.82rem; color: var(--danger); }
+
+.pairing-code-box {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  resize: none;
+  margin: 0 0 12px;
+  word-break: break-all;
+}
 
 /* Playful theme: rounder, friendlier shapes across the board. */
 :root[data-theme="playful"] .icon-btn,

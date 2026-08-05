@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-bookshelf-v5";
+const CACHE_NAME = "my-bookshelf-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,10 @@ const APP_SHELL = [
   "./js/storage.js",
   "./js/imageStore.js",
   "./js/lazyImage.js",
+  "./js/supabaseOAuth.js",
+  "./js/cloudSyncInstall.js",
+  "./js/cloudBackup.js",
+  "./js/cloudImageSync.js",
   "./js/theme.js",
   "./js/util.js",
   "./js/sheet.js",

@@ -12,6 +12,7 @@ const STORAGE_WARNING_DISMISSED_KEY = "mb_storage_warning_dismissed_at_v1";
 const FIRST_OPEN_KEY = "mb_first_open_at_v1";
 const ONBOARDING_SEEN_KEY = "mb_onboarding_seen_v1";
 const IMAGES_MIGRATED_KEY = "mb_images_migrated_v1";
+const TOMBSTONES_KEY = "mb_tombstones_v1";
 
 function uid() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -29,6 +30,28 @@ function readJSON(key, fallback) {
 
 function writeJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+// A deleted book leaves no trace in BOOKS_KEY to ever tell another device
+// it's gone -- this is that trace. Recorded on every delete regardless of
+// whether Cloud Backup is even configured (this module has no business
+// knowing that), consumed and cleared by js/cloudBackup.js's pushAll once
+// it's actually been synced. Harmless dead weight otherwise: a handful of
+// small {store, recordId, deletedAt} rows for anyone who never turns Cloud
+// Backup on.
+function recordTombstone(recordId) {
+  const tombstones = readJSON(TOMBSTONES_KEY, []);
+  tombstones.push({ id: `books:${recordId}`, store: "books", recordId, deletedAt: Date.now() });
+  writeJSON(TOMBSTONES_KEY, tombstones);
+}
+
+export async function getTombstones() {
+  return readJSON(TOMBSTONES_KEY, []);
+}
+
+export async function clearTombstones(ids) {
+  const idSet = new Set(ids);
+  writeJSON(TOMBSTONES_KEY, readJSON(TOMBSTONES_KEY, []).filter((t) => !idSet.has(t.id)));
 }
 
 // ---- Books ----
@@ -76,12 +99,73 @@ export async function saveBook(book) {
   return withTimestamp;
 }
 
-export async function deleteBook(id) {
+// { tombstone: false } is for js/cloudBackup.js's applyRemoteDeletion only,
+// replaying a deletion that already happened on another device -- recording
+// a *new* tombstone for that would just re-push it right back with a
+// fresher timestamp, and the row would never age out server-side.
+export async function deleteBook(id, { tombstone = true } = {}) {
   const book = getBook(id);
   if (book?.coverImage?.startsWith(IDB_PREFIX)) {
     await deleteImage(book.coverImage.slice(IDB_PREFIX.length)).catch(() => {});
   }
   writeJSON(BOOKS_KEY, getBooks().filter((b) => b.id !== id));
+  if (tombstone) recordTombstone(id);
+}
+
+// The only caller of the { tombstone: false } option above -- js/cloudBackup.js's
+// pullChanges routes a pulled deletion through here rather than calling
+// deleteBook directly, so the sync-only intent is explicit at the call site
+// instead of a bare `{ tombstone: false }` showing up in the middle of
+// feature code.
+export async function applyRemoteDeletion(store, recordId) {
+  if (store === "books") return deleteBook(recordId, { tombstone: false });
+}
+
+// A pulled record's coverImage arrives as either a portable data: URI (from
+// an old-style export, or another device that hasn't upgraded to
+// storage-based image sync), a "storage:<store>:<id>" reference (revived
+// lazily on first resolve, see cloudImageSync.js), a remote http(s) URL, or
+// nothing -- only the data: URI case needs reviving into this device's own
+// image store right away, keyed by the record's own id so every device
+// agrees on the same image-store key for the same record.
+async function reviveImage(image, id) {
+  if (typeof image !== "string" || !image.startsWith("data:")) return image || null;
+  try {
+    await putImage(id, await dataUrlToBlob(image));
+    return IDB_PREFIX + id;
+  } catch {
+    return null;
+  }
+}
+
+// Generic upsert-by-id, used only by Cloud Backup's pull/merge step
+// (js/cloudBackup.js) -- writes each record exactly as given, matching by
+// its own id, unlike importData() below whose always-new-id behavior is
+// only correct for a one-time file import, never for ongoing sync where two
+// devices need to agree on the same id for the same record.
+export async function upsertRecords(store, records) {
+  if (store !== "books" || !records.length) return;
+  const revived = await Promise.all(records.map(async (r) => ({ ...r, coverImage: await reviveImage(r.coverImage, r.id) })));
+  const books = getBooks();
+  for (const r of revived) {
+    const idx = books.findIndex((b) => b.id === r.id);
+    if (idx >= 0) books[idx] = r;
+    else books.push(r);
+  }
+  writeJSON(BOOKS_KEY, books);
+}
+
+// Rewrites just a book's coverImage field, leaving everything else alone --
+// used only by cloudImageSync.js's download side (via createStorageResolver's
+// injected patchRecordImage) to self-upgrade a pulled "storage:" reference to
+// a plain local "idb:" one the first time it's actually resolved, so every
+// later open is instant with no network round trip.
+export async function patchBookImage(id, coverImage) {
+  const books = getBooks();
+  const idx = books.findIndex((b) => b.id === id);
+  if (idx < 0) return;
+  books[idx] = { ...books[idx], coverImage };
+  writeJSON(BOOKS_KEY, books);
 }
 
 export function createEmptyBook() {

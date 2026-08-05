@@ -2,13 +2,41 @@ import { renderHome } from "./views/home.js";
 import { renderToRead } from "./views/toread.js";
 import { renderReading } from "./views/reading.js";
 import { applyTheme } from "./theme.js";
-import { createEmptyBook, migrateImagesToIndexedDB } from "./storage.js";
+import {
+  createEmptyBook,
+  migrateImagesToIndexedDB,
+  getBooks,
+  upsertRecords,
+  getTombstones,
+  clearTombstones,
+  applyRemoteDeletion,
+  patchBookImage,
+} from "./storage.js";
+import { registerRemoteResolver } from "./imageStore.js";
+import { createStorageResolver, STORAGE_PREFIX } from "./cloudImageSync.js";
 import { openBookEditor } from "./bookEditor.js";
 import { checkWhatsNew } from "./whatsNew.js";
 import { checkOnboarding } from "./onboarding.js";
 import { checkMigrationNotice } from "./migrationNotice.js";
+import { consumeOAuthRedirect } from "./supabaseOAuth.js";
+import { openCloudSyncSheet } from "./settingsMenu.js";
+import { startAutoSync } from "./cloudBackup.js";
 
 applyTheme();
+
+// Wires Cloud Backup's Storage-based image sync (js/cloudImageSync.js) into
+// every existing resolveImageSrc call site, with no call-site changes --
+// see imageStore.js's registerRemoteResolver. patchRecordImage is the one
+// piece cloudImageSync.js can't know generically: where this app's own
+// records actually live (a plain localStorage array here, see storage.js).
+registerRemoteResolver(
+  STORAGE_PREFIX,
+  createStorageResolver({
+    patchRecordImage: async (store, recordId, idbRef) => {
+      if (store === "books") await patchBookImage(recordId, idbRef);
+    },
+  })
+);
 
 const root = document.getElementById("app");
 
@@ -63,6 +91,13 @@ function handleIncomingShare() {
 
 window.addEventListener("hashchange", route);
 
+// Picks up the redirect back from Supabase's consent screen (see
+// supabaseOAuth.js / api/oauth-callback.js) before anything else touches
+// location.hash -- clears the token fragment out of the URL either way, and
+// reopens the Cloud Sync sheet with the result if this load was one of
+// those redirects.
+const oauthResult = consumeOAuthRedirect();
+
 // Anyone who saved cover photos before IndexedDB storage existed has them
 // sitting in localStorage as huge inline images — move those out before
 // the first render so the app isn't showing (and re-writing) oversized
@@ -86,7 +121,16 @@ Promise.all([migrationNotice, migrationDone]).then(() => {
     checkOnboarding();
     checkWhatsNew();
   }
+  if (oauthResult) openCloudSyncSheet(oauthResult);
 });
+
+// Inert unless Cloud Backup has actually been installed and configured
+// (see js/cloudBackup.js) -- a no-op otherwise. Runs a sync immediately,
+// then periodically/on-visibility-change while the app stays open; a
+// background pull doesn't re-render whatever view happens to be open right
+// now, so anything it brings in shows up on the next navigation or reload
+// rather than instantly -- a known limitation, not a bug.
+startAutoSync({ getBooks, upsertRecords, getTombstones, clearTombstones, applyRemoteDeletion });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
