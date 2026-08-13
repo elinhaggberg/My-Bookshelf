@@ -10,9 +10,12 @@ import {
   getTombstones,
   clearTombstones,
   applyRemoteDeletion,
+  getPrefsSnapshot,
+  getPrefsUpdatedAt,
+  applyPrefsSnapshot,
 } from "./storage.js";
 import { shareOrDownload } from "./share.js";
-import { getTheme, setTheme } from "./theme.js";
+import { getTheme, setTheme, applyTheme } from "./theme.js";
 import {
   getConnectUrl,
   isCloudSyncConnected,
@@ -40,7 +43,16 @@ import {
 } from "./cloudBackup.js";
 import { ICON_CHECK } from "./icons.js";
 
-const STORAGE_FNS = { getBooks, upsertRecords, getTombstones, clearTombstones, applyRemoteDeletion };
+const STORAGE_FNS = {
+  getBooks,
+  upsertRecords,
+  getTombstones,
+  clearTombstones,
+  applyRemoteDeletion,
+  getPrefsSnapshot,
+  getPrefsUpdatedAt,
+  applyPrefsSnapshot,
+};
 
 export function openSettingsMenu(refresh) {
   const sheet = openSheet("tpl-settings-menu");
@@ -281,6 +293,9 @@ export function openCloudSyncSheet(oauthResult) {
     backupMessageEl.classList.add("hidden");
     try {
       await syncNow(STORAGE_FNS);
+      applyTheme();
+      const homeTitleEl = document.getElementById("home-title");
+      if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
       renderLastSynced();
       backupMessageEl.textContent = "Synced!";
       backupMessageEl.classList.remove("hidden", "error");
@@ -517,6 +532,9 @@ function openCloudRestoreSheet() {
         messageEl.classList.add("error");
         return;
       }
+      applyTheme();
+      const homeTitleEl = document.getElementById("home-title");
+      if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
       messageEl.textContent = "Restored! Your data should be here now.";
       messageEl.classList.remove("hidden", "error");
       setTimeout(() => sheet.close(), 1200);
@@ -602,7 +620,12 @@ function openImport(refresh) {
       let text = result.bookCount
         ? `Imported ${result.bookCount} book${result.bookCount !== 1 ? "s" : ""}.`
         : "Import complete.";
-      if (result.preferencesApplied) text += " Restored your theme/settings too.";
+      if (result.preferencesApplied) {
+        text += " Restored your theme/settings too.";
+        applyTheme();
+        const homeTitleEl = document.getElementById("home-title");
+        if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
+      }
       messageEl.textContent = text;
       if (refresh) refresh();
       setTimeout(() => sheet.close(), 900);
