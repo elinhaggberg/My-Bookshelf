@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-bookshelf-v6";
+const CACHE_NAME = "my-bookshelf-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -37,7 +37,9 @@ const APP_SHELL = [
   "./js/views/toread.js",
   "./js/views/reading.js",
   "./icons/icon-192.png",
+  "./icons/icon-192-dark.png",
   "./icons/icon-512.png",
+  "./icons/icon-512-dark.png",
   "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png",
 ];
